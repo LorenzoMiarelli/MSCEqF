@@ -1,13 +1,22 @@
 services:
   msceqf:
-    image: msceqf:ros${ROS_VERSION}
+    image: msceqf:ros${ROS_VERSION:-1}
     network_mode: host
-    environment:
-      - DISPLAY=${DISPLAY}
-      - QT_X11_NO_MITSHM=1
-      - NVIDIA_DRIVER_CAPABILITIES=all # need if using Nvidia drivers
-    volumes:
-      - /tmp/.X11-unix:/tmp/.X11-unix:rw
-    runtime: nvidia # need if using Nvidia drivers
     stdin_open: true
     tty: true
+    environment:
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all # from --gpus all
+              capabilities: [gpu]
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - /home/${USER}/Projects/datasets:/root/datasets:ro
+      - /home/${USER}/Projects/params:/root/params:ro
+      - /home/${USER}/.tmux.conf:/root/.tmux.conf:ro

@@ -1,13 +1,29 @@
 FROM osrf/ros:noetic-desktop-full
 
-RUN apt-get update && apt-get install -y nano git
-RUN sudo apt-get install -y python3-catkin-tools python3-osrf-pycommon python3-wstool build-essential
+# Install dependencies
+RUN apt-get update && apt-get install -y \
+    nano \
+    git \
+    python3-catkin-tools \
+    python3-osrf-pycommon \
+    python3-wstool \
+    build-essential \
+    tmux \
+    && rm -rf /var/lib/apt/lists/*
 
+# Set up the catkin workspace
 RUN mkdir -p /root/catkin_ws/src/msceqf
 COPY . /root/catkin_ws/src/msceqf/
 
-RUN apt update
-RUN echo 'source /root/catkin_ws/devel/setup.bash' >> /root/.bashrc
-RUN /bin/bash -c "source /root/.bashrc"
+# Set the working directory for the build
+WORKDIR /root/catkin_ws
 
+# Source the ROS environment and build the workspace in a single RUN layer.
+# Using 'bash -c' ensures the sourcing and building happen in the same shell.
+RUN . /opt/ros/noetic/setup.sh && catkin_make
+
+# Add the workspace setup to .bashrc for interactive shells
+RUN echo "source /root/catkin_ws/devel/setup.bash" >> /root/.bashrc
+
+# Set the final working directory
 WORKDIR /root
