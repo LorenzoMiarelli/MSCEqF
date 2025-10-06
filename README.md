@@ -8,6 +8,7 @@ MSCEqF is a multi-state constraint equivariant filter for visual-inertial naviga
 It is based on the recent advances in equivaraint inertial navigation systems [[1](#1), [2](#2), [3](#3), [4](#3)].
 
 ## Features
+
 ### Design features
 
 - Developed as a pure C++ library with ROS1 and ROS2 wrappers available
@@ -29,11 +30,11 @@ It is based on the recent advances in equivaraint inertial navigation systems [[
 
 ### Future roadmap
 
- - [x] ROS1 wrapper
- - [x] ROS2 wrapper
- - [x] Equivariant Zero velocity Update (EqZVU)
- - [ ] Unit-sphere projection method support
- - [ ] Equivariant Persistent (SLAM) features update support
+- [x] ROS1 wrapper
+- [x] ROS2 wrapper
+- [x] Equivariant Zero velocity Update (EqZVU)
+- [ ] Unit-sphere projection method support
+- [ ] Equivariant Persistent (SLAM) features update support
 
 ## Documentation
 
@@ -51,20 +52,23 @@ MSCEqF has the following dependencies which are automatically downloaded and lin
 - [OpenCV](https://github.com/opencv/opencv.git)
 
 ## Getting started
+
 ### ROS free setup
+
 ```sh
-$ git clone https://github.com/aau-cns/MSCEqF.git msceqf
-$ cd msceqf
-$ export BUILD_TYPE=<TYPE>  # Replace <TYPE> with one of these: Release, Debug, RelWithDebInfo, ...
-$ mkdir -p build/$BUILD_TYPE
-$ cd build/$BUILD_TYPE && cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DMSCEQF_TESTS=ON ../..
-$ cmake --build . --config $BUILD_TYPE --target all -j && cd ../..
+git clone https://github.com/aau-cns/MSCEqF.git msceqf
+cd msceqf
+export BUILD_TYPE=<TYPE>  # Replace <TYPE> with one of these: Release, Debug, RelWithDebInfo, ...
+mkdir -p build/$BUILD_TYPE
+cd build/$BUILD_TYPE && cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DMSCEQF_TESTS=ON ../..
+cmake --build . --config $BUILD_TYPE --target all -j && cd ../..
 ```
 
 ### Run tests
+
 ```sh
-$ cd msceqf/build/$BUILD_TYPE
-$ ./msceqf_tests
+cd msceqf/build/$BUILD_TYPE
+./msceqf_tests
 ```
 
 ### Run example (Euroc)
@@ -72,41 +76,47 @@ $ ./msceqf_tests
 After downloading the [Euroc](https://projects.asl.ethz.ch/datasets/doku.php?id=kmavvisualinertialdatasets) follows
 
 ```sh
-$ cd msceqf/build/$BUILD_TYPE
-$ ./msceqf_euroc <sequence_name> <euroc_dataset_folder> <euroc_example_folder>
+cd msceqf/build/$BUILD_TYPE
+./msceqf_euroc <sequence_name> <euroc_dataset_folder> <euroc_example_folder>
 ```
 
 ### ROS1 setup
+
 ```sh
-$ git clone https://github.com/aau-cns/MSCEqF.git ~/ws/src/msceqf
-$ cd ~/ws
-$ export BUILD_TYPE=<TYPE>  # Replace <TYPE> with one of these: Release, Debug, RelWithDebInfo, ...
-$ catkin build -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DROS_BUILD=ON
+git clone https://github.com/aau-cns/MSCEqF.git ~/ws/src/msceqf
+cd ~/ws
+export BUILD_TYPE=<TYPE>  # Replace <TYPE> with one of these: Release, Debug, RelWithDebInfo, ...
+catkin build -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DROS_BUILD=ON
 ```
 
 ### ROS2 setup
+
 ```sh
-$ git clone https://github.com/aau-cns/MSCEqF.git ~/ws/src/msceqf
-$ cd ~/ws
-$ export BUILD_TYPE=<TYPE>  # Replace <TYPE> with one of these: Release, Debug, RelWithDebInfo, ...
-$ colcon build --event-handlers console_cohesion+ --cmake-args -DCMAKE_BUILD_TYPE=$BUILD_TYPE --cmake-args -DROS_BUILD=ON
+git clone https://github.com/aau-cns/MSCEqF.git ~/ws/src/msceqf
+cd ~/ws
+export BUILD_TYPE=<TYPE>  # Replace <TYPE> with one of these: Release, Debug, RelWithDebInfo, ...
+colcon build --event-handlers console_cohesion+ --cmake-args -DCMAKE_BUILD_TYPE=$BUILD_TYPE --cmake-args -DROS_BUILD=ON
 ```
 
 ### Docker setup
+
 To setup Docker with Nvidia drivers install nvidia-toolkit first
+
 ```sh
-$ distribution=$(. /etc/os-release;echo $ID$VERSION_ID) && curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg && curl -s -L https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.list | sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
-$ sudo apt update
-$ sudo apt-get install -y nvidia-container-toolkit
+distribution=$(. /etc/os-release;echo $ID$VERSION_ID) && curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg && curl -s -L https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.list | sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+sudo apt update
+sudo apt-get install -y nvidia-container-toolkit
 ```
+
 Then build and run the docker container
+
 ```sh
-$ sudo systemctl restart docker
-$ cd <path_to_msceqf_folder>
-$ export ROS_VERSION=<Version>  # Enter either 1 or 2 (e.g. ROS_VERSION=1)
-$ docker build --network=host -t msceqf:ros$ROS_VERSION -f docker/Dockerfile_ros$ROS_VERSION .
-$ xhost +
-$ docker run --net=host -it --gpus all --env="NVIDIA_DRIVER_CAPABILITIES=all" --env="DISPLAY" --env="QT_X11_NO_MITSHM=1" --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" msceqf:ros$ROS_VERSION
+sudo systemctl restart docker
+cd <path_to_msceqf_folder>
+export ROS_VERSION=<Version>  # Enter either 1 or 2 (e.g. ROS_VERSION=1)
+docker build --network=host -t msceqf:ros$ROS_VERSION -f docker/Dockerfile_ros$ROS_VERSION .
+xhost +local:
+docker run --net=host -it --gpus all --env="NVIDIA_DRIVER_CAPABILITIES=all" --env="DISPLAY" --env="QT_X11_NO_MITSHM=1" --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" msceqf:ros$ROS_VERSION
 ```
 
 If Nvidia drivers are not supported, simply run docker as follows
