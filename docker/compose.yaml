@@ -17,6 +17,6 @@ services:
               capabilities: [gpu]
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
-      - /home/${USER}/Projects/datasets:/root/datasets:ro
-      - /home/${USER}/Projects/params:/root/params:ro
+      - /home/${USER}/Projects/datasets:/root/datasets
+      - /home/${USER}/Projects/params:/root/params
       - /home/${USER}/.tmux.conf:/root/.tmux.conf:ro
