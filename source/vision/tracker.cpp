@@ -71,9 +71,16 @@ Tracker::Tracker(const TrackerOptions& opts, const Vector4& intrinsics)
     {
       cam_ = createCamera<EquidistantCamera>(opts_.cam_options_, intrinsics);
       utils::Logger::info("Initialized KLT tracker based on pinhole-equidistant camera model");
+    break;
+    }
+    case DistortionModel::FOV:
+    {
+      cam_ = createCamera<FOVCamera>(opts_.cam_options_, intrinsics);
+      utils::Logger::info("Initialized KLT tracker based on pinhole-FOV camera model");
+    break;
     }
     default:
-      break;
+      throw std::runtime_error("Unsupported distortion model");
   }
 
   switch (opts_.detector_)

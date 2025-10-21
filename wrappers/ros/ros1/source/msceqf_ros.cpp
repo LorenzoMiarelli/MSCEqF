@@ -19,6 +19,7 @@ MSCEqFRos::MSCEqFRos(const ros::NodeHandle &nh,
                      const std::string &msceqf_config_filepath,
                      const std::string &imu_topic,
                      const std::string &cam_topic,
+                     const std::string &features_topic,
                      const std::string &pose_topic,
                      const std::string &path_topic,
                      const std::string &image_topic,
@@ -31,9 +32,11 @@ MSCEqFRos::MSCEqFRos(const ros::NodeHandle &nh,
 {
   sub_cam_ = nh_.subscribe(cam_topic, 10, &MSCEqFRos::callback_image, this);
   sub_imu_ = nh_.subscribe(imu_topic, 1000, &MSCEqFRos::callback_imu, this);
+  sub_features_ = nh_.subscribe(features_topic, 10, &MSCEqFRos::callback_features, this);
 
   utils::Logger::info("Subscribing: " + std::string(sub_cam_.getTopic().c_str()));
   utils::Logger::info("Subscribing: " + std::string(sub_imu_.getTopic().c_str()));
+  utils::Logger::info("Subscribing: " + std::string(sub_features_.getTopic().c_str()));
 
   pub_pose_ = nh_.advertise<geometry_msgs::PoseWithCovarianceStamped>(pose_topic, 1);
   pub_path_ = nh_.advertise<nav_msgs::Path>(path_topic, 1);
@@ -81,6 +84,147 @@ void MSCEqFRos::callback_image(const sensor_msgs::Image::ConstPtr &msg)
   }
 }
 
+std::string MSCEqFRos::make_3d_key(double x, double y, double z)
+{
+  std::ostringstream oss;
+  oss << std::fixed << std::setprecision(6) << x << "," << y << "," << z;
+  return oss.str();
+}
+
+uint MSCEqFRos::get_feature_id(double x, double y, double z)
+{
+  std::string key = make_3d_key(x, y, z);
+  auto it = feature_3d_to_id_.find(key);
+  if (it != feature_3d_to_id_.end())
+  {
+    return it->second;
+  }
+  else
+  {
+    uint new_id = next_feature_id_++;
+    feature_3d_to_id_[key] = new_id;
+    return new_id;
+  }
+}
+
+void MSCEqFRos::callback_features(const std_msgs::Float64MultiArray::ConstPtr &msg)
+{
+  if (msg->data.empty())
+  {
+      utils::Logger::warn("Received empty features message");
+      return;
+  }
+
+  const size_t values_per_feature = 10;
+  const size_t num_features = msg->data.size() / values_per_feature;
+
+  if (msg->data.size() % values_per_feature != 0)
+  {
+      utils::Logger::err("Invalid feature data size: " + std::to_string(msg->data.size()));
+      return;
+  }
+
+  if (num_features == 0) return;
+
+  uint cam_id = static_cast<uint>(msg->data[0]);
+  double timestamp_curr = msg->data[4];
+
+  utils::Logger::info("Received " + std::to_string(num_features) + 
+                      " features from cam" + std::to_string(cam_id) + 
+                      " at t=" + std::to_string(timestamp_curr));
+
+  // Get camera
+  const auto& cam = sys_.getTrackManager().cam();
+  
+  if (!cam)
+  {
+      utils::Logger::err("Camera not initialized");
+      return;
+  }
+
+  // Create TriangulatedFeatures
+  msceqf::TriangulatedFeatures triangulated_features;
+  triangulated_features.timestamp_ = timestamp_curr;
+  triangulated_features.features_.distorted_uvs_.reserve(num_features);
+  triangulated_features.features_.uvs_.reserve(num_features);
+  triangulated_features.features_.normalized_uvs_.reserve(num_features);
+  triangulated_features.features_.ids_.reserve(num_features);
+  triangulated_features.points_.reserve(num_features);
+
+  // Parse each feature
+  for (size_t i = 0; i < num_features; ++i)
+  {
+      size_t offset = i * values_per_feature;
+      
+      // These are PIXEL coordinates
+      float u_pixel = static_cast<float>(msg->data[offset + 5]);
+      float v_pixel = static_cast<float>(msg->data[offset + 6]);
+      double x_3d = msg->data[offset + 7];
+      double y_3d = msg->data[offset + 8];
+      double z_3d = msg->data[offset + 9];
+
+      uint feature_id = get_feature_id(x_3d, y_3d, z_3d);
+      
+      // Store pixel coordinates (assume already undistorted by MATLAB)
+      cv::Point2f pixel_coord(u_pixel, v_pixel);
+      triangulated_features.features_.distorted_uvs_.push_back(pixel_coord);
+      triangulated_features.features_.uvs_.push_back(pixel_coord);  // No undistortion needed
+      triangulated_features.features_.ids_.push_back(feature_id);
+      
+      // Store 3D point
+      msceqf::Vector3 point_3d;
+      point_3d << x_3d, y_3d, z_3d;
+      triangulated_features.points_.push_back(point_3d);
+
+      if (i == 0)  // Just log first feature
+      {
+        utils::Logger::info("Feature 0: 3D position = (" + 
+                          std::to_string(x_3d) + ", " + 
+                          std::to_string(y_3d) + ", " + 
+                          std::to_string(z_3d) + ")");
+      }
+  }
+
+  // Normalize the pixel coordinates
+  triangulated_features.features_.normalized_uvs_ = triangulated_features.features_.uvs_;
+  cam->normalize(triangulated_features.features_.normalized_uvs_);
+
+  if (num_features > 0)
+  {
+    utils::Logger::info("First 5 feature IDs: " + 
+                       std::to_string(triangulated_features.features_.ids_[0]) + ", " +
+                       std::to_string(triangulated_features.features_.ids_[1]) + ", " +
+                       std::to_string(triangulated_features.features_.ids_[2]) + ", " +
+                       std::to_string(triangulated_features.features_.ids_[3]) + ", " +
+                       std::to_string(triangulated_features.features_.ids_[4]));
+  }
+
+  // Count valid features
+  int valid_count = 0;
+  for (const auto& uv : triangulated_features.features_.uvs_)
+  {
+      if (uv.x >= 0 && uv.x < 640 && uv.y >= 0 && uv.y < 480)
+      {
+          valid_count++;
+      }
+  }
+  utils::Logger::info("Valid features: " + 
+                    std::to_string(valid_count) + "/" + std::to_string(num_features));
+
+  // After creating triangulated_features, log its size
+  utils::Logger::info("Created TriangulatedFeatures with " + 
+                     std::to_string(triangulated_features.features_.ids_.size()) + 
+                     " features and " + 
+                     std::to_string(triangulated_features.points_.size()) + " points");
+  
+  // Buffer for processing
+  {
+      std::lock_guard<std::mutex> lock(mutex_);
+      triangulated_features_.push_back(triangulated_features);
+      std::sort(triangulated_features_.begin(), triangulated_features_.end());
+  }
+}
+
 void MSCEqFRos::callback_imu(const sensor_msgs::Imu::ConstPtr &msg)
 {
   msceqf::Imu imu;
@@ -96,9 +240,33 @@ void MSCEqFRos::callback_imu(const sensor_msgs::Imu::ConstPtr &msg)
   if (!processing_)
   {
     processing_ = true;
-    std::thread th([&, timestamp] {
+    std::thread th([&, timestamp]
+      {
       {
         std::lock_guard<std::mutex> lock(mutex_);
+        // Process features measurements
+        while (!triangulated_features_.empty() && triangulated_features_.front().timestamp_ < timestamp)
+        {
+          // Get reference to features before processing
+          auto& curr_features = triangulated_features_.front();
+          double features_timestamp = curr_features.timestamp_;
+
+          // ADD THIS: Log what we're about to process
+          utils::Logger::info("Processing " + 
+                             std::to_string(curr_features.features_.ids_.size()) + 
+                             " features with " + 
+                             std::to_string(curr_features.points_.size()) + 
+                             " 3D points at t=" + 
+                             std::to_string(features_timestamp));
+
+          // Process the features
+          sys_.processMeasurement(curr_features);
+          // Publish pose after processing features
+          publishFromFeatures(features_timestamp);
+          // Remove processed features
+          triangulated_features_.pop_front();
+        }
+        // Process images measurements
         while (!cams_.empty() && cams_.front().timestamp_ < timestamp)
         {
           sys_.processMeasurement(cams_.front());
@@ -106,8 +274,7 @@ void MSCEqFRos::callback_imu(const sensor_msgs::Imu::ConstPtr &msg)
           cams_.pop_front();
         }
       }
-      processing_ = false;
-    });
+      processing_ = false; });
     th.detach();
   }
 }
@@ -244,6 +411,68 @@ void MSCEqFRos::publish(const msceqf::Camera &cam)
     {
       bag_.write(pub_intrinsics_.getTopic().c_str(), intrinsics_.header.stamp, intrinsics_);
     }
+  }
+
+  ++seq_;
+}
+
+void MSCEqFRos::publishFromFeatures(const double& timestamp)
+{
+  if (!sys_.isInit())
+  {
+    return;
+  }
+
+  auto est = sys_.stateEstimate();
+  auto origin = sys_.stateOrigin();
+
+  pose_.header.stamp.fromSec(timestamp);
+  pose_.header.frame_id = "global";
+  pose_.header.seq = seq_;
+
+  pose_.pose.pose.orientation.x = est.T().q().x();
+  pose_.pose.pose.orientation.y = est.T().q().y();
+  pose_.pose.pose.orientation.z = est.T().q().z();
+  pose_.pose.pose.orientation.w = est.T().q().w();
+
+  pose_.pose.pose.position.x = est.T().p().x();
+  pose_.pose.pose.position.y = est.T().p().y();
+  pose_.pose.pose.position.z = est.T().p().z();
+
+  // Covariance
+  Eigen::Matrix<double, 6, 6> cov = Eigen::Matrix<double, 6, 6>::Zero();
+  cov.block<3, 3>(0, 0) = sys_.coreCovariance().block<3, 3>(6, 6);
+  cov.block<3, 3>(0, 3) = sys_.coreCovariance().block<3, 3>(6, 0);
+  cov.block<3, 3>(3, 0) = sys_.coreCovariance().block<3, 3>(0, 6);
+  cov.block<3, 3>(3, 3) = sys_.coreCovariance().block<3, 3>(0, 0);
+  for (int r = 0; r < 6; r++)
+  {
+    for (int c = 0; c < 6; c++)
+    {
+      pose_.pose.covariance[6 * r + c] = cov(r, c);
+    }
+  }
+
+  pub_pose_.publish(pose_);
+
+  if (record_)
+  {
+    bag_.write(pub_pose_.getTopic().c_str(), pose_.header.stamp, pose_);
+  }
+
+  // Optionally publish path
+  if (pub_path_.getNumSubscribers() != 0)
+  {
+    geometry_msgs::PoseStamped pose;
+    pose.header = pose_.header;
+    pose.pose = pose_.pose.pose;
+
+    path_.header.stamp.fromSec(timestamp);
+    path_.header.seq = seq_;
+    path_.header.frame_id = "global";
+    path_.poses.push_back(pose);
+
+    pub_path_.publish(path_);
   }
 
   ++seq_;

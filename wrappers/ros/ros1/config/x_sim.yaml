@@ -1,0 +1,95 @@
+# Initialization
+init_with_given_state: true
+q0: [0.0, 0.0, 0.0, 1.0] # [x,y,z,w]
+v0: [1.0, 0.0, 0.0]
+p0: [0, 0, 5.0]
+b0: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+t0: 0.0
+
+# Initial standard deviations (attitude, velocity, position, bias, extrinsics, instrinsics)
+extended_pose_std: [3.0, 3.0, 3.0, 0.05, 0.05, 0.05, 0.0, 0.0, 0.0]
+bias_std: [6.0, 6.0, 6.0, 0.3, 0.3, 0.3]
+extrinsics_std: [1.0e-2, 1.0e-2, 1.0e-2, 1.0e-2, 1.0e-2, 1.0e-2]
+intrinsics_std: [1.0, 1.0, 1.0, 1.0]
+
+# IMU noise statistics
+accelerometer_noise_density: 0.0083 # Accel noise spectral density [m/s^2/sqrt(Hz)]
+accelerometer_random_walk:   0.00083 # Accel bias random walk [m/s^3/sqrt(Hz)]
+gyroscope_noise_density: 0.0013 # Gyro noise spectral density [rad/s/sqrt(Hz)]
+gyroscope_random_walk:   0.00013 # Gyro bias random walk [rad/s^2/sqrt(Hz)]
+
+# Camera calibration (according to kalibr format, both T_imu_cam and T_cam_imu)
+# distortion_coeffs: [0.0, 0.0, 0.0, 0.0]
+# distortion_model: radtan
+distortion_coeffs: [1.0]  # s parameter from MATLAB (cam1.s = 0.94)
+distortion_model: fov
+resolution: [640, 480]
+# cam1_fx: 0.595876796297105
+# cam1_fy: 0.866025403784439 
+# cam1_cx: 0.500781250000000 
+# cam1_cy: 0.501041666666667 
+intrinsics: [381.361, 415.692, 320.5, 240.5] # [fx, fy, cx, cy]
+# homogeneus transformation 
+T_imu_cam: 
+  - [1.0, 0.0, 0.0, 0.0]
+  - [0.0, -1.0, 0.0, 0.0]
+  - [0.0, 0.0, -1.0, 0.0]
+  - [0.0, 0.0, 0.0, 1.0]
+
+# Initializer options
+# For IMU only motion detection set static_initializer_disparity_threshold: 0.0
+# For DISPARITY only motion detection set static_initializer_acc_threshold: 0.0
+static_initializer_imu_window: 1.0
+static_initializer_disparity_window: 0.5
+# static_initializer_acc_threshold: 0.25
+# static_initializer_disparity_threshold: 1.0
+static_initializer_acc_threshold: 0.0
+static_initializer_disparity_threshold: 0.0
+
+# Propagator options
+# For numerical exponential computation (costly) set state_transition_order: -1
+# For approximated first-order exponential computation (recommended on low-power hardware) set state_transition_order: 0
+state_transition_order: 0
+imu_buffer_max_size: 1000
+
+# Updater options
+# Possible options for zero_velocity_update are enabled, disabled, beginning
+refine_traingulation: true
+feature_min_depth: 0.1
+feature_max_depth: 20
+feature_refinement_max_iterations: 20
+feature_refinement_tollerance: 1e-10
+measurement_projection_method: unit_plane
+feature_representation: anchored_inverse_depth
+pixel_standerd_deviation: 0.33
+curvature_correction: false
+# zero_velocity_update: enabled
+zero_velocity_update: disabled
+
+# State options
+enable_camera_intrinsic_calibration: false
+gravity: 9.81
+num_clones: 11
+
+# Tracker options
+# Possible options for feature_detector are fast and shi-tomasi
+equalization_method: histogram
+optical_flow_pyramid_levels: 3
+detector_pyramid_levels: 1
+feature_detector: fast
+grid_x_size: 3
+grid_y_size: 3
+min_feature_pixel_distance: 15
+# min_features: 100
+min_features: 10
+max_features: 120
+fast_threshold: 20
+shi_tomasi_quality_level: 0.75
+
+# Track Manager
+max_track_length: 10
+min_track_length: 3  
+
+# Logger level 
+# Possible levels are 0: Full, 1: INFO, 2: WARN, 3: ERR, 4: INACTIVE
+logger_level: 1

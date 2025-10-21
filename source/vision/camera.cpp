@@ -200,4 +200,125 @@ void EquidistantCamera::undistortImage(const cv::Mat& image, cv::Mat& image_undi
   cv::remap(image, image_undistorted, map1, map2, cv::INTER_LINEAR);
 }
 
+FOVCamera::FOVCamera(const CameraOptions& opts, const Vector4& intrinsics)
+    : PinholeCamera(opts.distortion_coefficients_, intrinsics, opts.resolution_(0), opts.resolution_(1))
+{
+  // Validate that we have the s parameter
+  if (distortion_coefficients_.size() < 1)
+  {
+    throw std::runtime_error("FOV distortion model requires at least 1 coefficient (s parameter)");
+  }
+}
+
+void FOVCamera::undistort(std::vector<cv::Point2f>& uv_cv, const bool& normalize)
+{
+  // Get FOV parameter
+  fp s = distortion_coefficients_(0);
+  
+  // Create camera matrix
+  cv::Matx<fp, 3, 3> K_cv;
+  K_cv(0, 0) = intrinsics_(0);
+  K_cv(1, 1) = intrinsics_(1);
+  K_cv(0, 2) = intrinsics_(2);
+  K_cv(1, 2) = intrinsics_(3);
+  K_cv(2, 2) = 1.0f;
+
+  // Undistort each point
+  std::vector<cv::Point2f> uv_normalized;
+  uv_normalized.reserve(uv_cv.size());
+
+  for (const auto& uv : uv_cv)
+  {
+    // Convert to normalized distorted coordinates
+    fp x_d = (uv.x - intrinsics_(2)) / intrinsics_(0);
+    fp y_d = (uv.y - intrinsics_(3)) / intrinsics_(1);
+    
+    // Compute distorted radius
+    fp r_d = std::sqrt(x_d * x_d + y_d * y_d);
+    
+    // Undistorted radius
+    fp r_u;
+    if (std::abs(s) > 1e-8)
+    {
+      fp tan_half_s = std::tan(s / 2.0);
+      r_u = (std::abs(tan_half_s) > 1e-8) ? std::tan(r_d * s) / (2.0 * tan_half_s) : r_d;
+    }
+    else
+    {
+      r_u = r_d;
+    }
+    
+    // Compute undistorted normalized coordinates
+    fp scale = (r_d > 1e-8) ? (r_u / r_d) : 1.0;
+    fp x_u = scale * x_d;
+    fp y_u = scale * y_d;
+    
+    uv_normalized.emplace_back(static_cast<float>(x_u), static_cast<float>(y_u));
+  }
+
+  if (normalize)
+  {
+    uv_cv = std::move(uv_normalized);
+  }
+  else
+  {
+    // Convert back to pixel coordinates
+    for (size_t i = 0; i < uv_normalized.size(); ++i)
+    {
+      uv_cv[i].x = uv_normalized[i].x * intrinsics_(0) + intrinsics_(2);
+      uv_cv[i].y = uv_normalized[i].y * intrinsics_(1) + intrinsics_(3);
+    }
+  }
+}
+
+void FOVCamera::undistortImage(const cv::Mat& image, cv::Mat& image_undistorted)
+{
+  // Get FOV parameter
+  fp s = distortion_coefficients_(0);
+  
+  // Create remap matrices
+  cv::Mat map_x(image.size(), CV_32FC1);
+  cv::Mat map_y(image.size(), CV_32FC1);
+  
+  // Build lookup table for efficiency
+  for (int v = 0; v < image.rows; ++v)
+  {
+    float* map_x_row = map_x.ptr<float>(v);
+    float* map_y_row = map_y.ptr<float>(v);
+    
+    for (int u = 0; u < image.cols; ++u)
+    {
+      // Normalized undistorted coordinates
+      fp x_u = (u - intrinsics_(2)) / intrinsics_(0);
+      fp y_u = (v - intrinsics_(3)) / intrinsics_(1);
+      
+      // Compute undistorted radius
+      fp r_u = std::sqrt(x_u * x_u + y_u * y_u);
+      
+      // Apply distortion (inverse operation)
+      fp r_d;
+      if (std::abs(s) > 1e-8)
+      {
+        r_d = std::atan(2.0 * r_u * std::tan(s / 2.0)) / s;
+      }
+      else
+      {
+        r_d = r_u;
+      }
+      
+      // Compute distorted normalized coordinates
+      fp scale = (r_u > 1e-8) ? (r_d / r_u) : 1.0;
+      fp x_d = scale * x_u;
+      fp y_d = scale * y_u;
+      
+      // Convert to pixel coordinates
+      map_x_row[u] = static_cast<float>(x_d * intrinsics_(0) + intrinsics_(2));
+      map_y_row[u] = static_cast<float>(y_d * intrinsics_(1) + intrinsics_(3));
+    }
+  }
+  
+  // Apply remapping
+  cv::remap(image, image_undistorted, map_x, map_y, cv::INTER_LINEAR);
+}
+
 }  // namespace msceqf

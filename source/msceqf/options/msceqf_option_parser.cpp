@@ -232,6 +232,10 @@ void OptionParser::parseCameraParameters(SE3& extrinsics,
     {
       distortion_model = DistortionModel::EQUIDISTANT;
     }
+    else if (model.compare("fov") == 0)
+    {
+      distortion_model = DistortionModel::FOV;
+    }
     else
     {
       throw std::runtime_error(model + " distortion model not supported.");

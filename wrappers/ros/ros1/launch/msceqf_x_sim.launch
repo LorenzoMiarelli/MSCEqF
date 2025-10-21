@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+
+    <arg name="config_filepath" default="$(find msceqf)wrappers/ros/ros1/config/x_sim.yaml" />
+
+    <arg name="imu_topic"        default="/fcu/imu" />
+    <arg name="cam_topic"        default="/image" />
+    <arg name="pose_topic"       default="/pose" />
+    <arg name="path_topic"       default="/path" />
+    <arg name="image_topic"      default="/tracks" />
+    <arg name="features_topic"   default="/cam1/features" />
+
+    <node name="msceqf_ros1" pkg="msceqf" type="msceqf_ros1" output="screen" clear_params="true">
+
+        <param name="config_filepath"   type="string"       value="$(arg config_filepath)" />
+        <param name="imu_topic"         type="string"       value="$(arg imu_topic)" />
+        <param name="cam_topic"         type="string"       value="$(arg cam_topic)" />
+        <param name="pose_topic"        type="string"       value="$(arg pose_topic)" />
+        <param name="path_topic"        type="string"       value="$(arg path_topic)" />
+        <param name="image_topic"       type="string"       value="$(arg image_topic)" />
+        <param name="features_topic"    type="string"       value="$(arg features_topic)" />
+        
+    </node>
+
+</launch>

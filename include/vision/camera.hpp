@@ -203,6 +203,36 @@ using EquidistantCameraSharedPtr = std::shared_ptr<EquidistantCamera>;
 using EquidistantCameraUniquePtr = std::unique_ptr<EquidistantCamera>;
 
 /**
+ * @brief This class represent a pinhole camera with FOV (Field of View) distortion model
+ * 
+ * FOV model as described in Devernay and Faugeras, 2001:
+ * "Straight lines have to be straight"
+ */
+struct FOVCamera final : public PinholeCamera
+{
+  FOVCamera(const CameraOptions& opts, const Vector4& intrinsics);
+
+  /**
+   * @brief Undistort given distorted point in OpenCV format (std::vector<cv::Point2f>)
+   *
+   * @param uv_cv uv coordinates
+   * @param normalize Flag to decide wether normalize coordinates or not
+   */
+  void undistort(std::vector<cv::Point2f>& uv_cv, const bool& normalize) override;
+
+  /**
+   * @brief Undistort given image in openCV format (cv::Mat)
+   *
+   * @param image Image to be undistorted
+   * @param image_undistorted Undistorted image
+   */
+  void undistortImage(const cv::Mat& image, cv::Mat& image_undistorted) override;
+};
+
+using FOVCameraSharedPtr = std::shared_ptr<FOVCamera>;
+using FOVCameraUniquePtr = std::unique_ptr<FOVCamera>;
+
+/**
  * @brief Factory method for cameras
  *
  * @tparam uUnderlying type of pointer to be made

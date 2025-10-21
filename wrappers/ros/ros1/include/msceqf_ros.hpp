@@ -18,6 +18,7 @@
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/CameraInfo.h>
+#include <std_msgs/Float64MultiArray.h>
 #include <sensor_msgs/PointCloud.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <nav_msgs/Path.h>
@@ -26,6 +27,7 @@
 #include <rosbag/bag.h>
 
 #include "msceqf/msceqf.hpp"
+#include "sensors/sensor_data.hpp"
 
 class MSCEqFRos
 {
@@ -36,6 +38,7 @@ class MSCEqFRos
    * @param msceqf_config_filepath Path of configuration yaml file for the msceqf
    * @param imu_topic IMU topic
    * @param cam_topic Camera topic
+   * @param features_topic Features topic
    * @param pose_topic Pose topic
    * @param path_topic Path topic
    * @param image_topic Image topic
@@ -48,6 +51,7 @@ class MSCEqFRos
             const std::string &msceqf_config_filepath,
             const std::string &imu_topic,
             const std::string &cam_topic,
+            const std::string &features_topic,
             const std::string &pose_topic,
             const std::string &path_topic,
             const std::string &image_topic,
@@ -69,6 +73,39 @@ class MSCEqFRos
    */
   void callback_imu(const sensor_msgs::Imu::ConstPtr &msg);
 
+  /**
+   * @brief Create unique key from 3D coordinates for feature ID mapping
+   *
+   * @param x X coordinate
+   * @param y Y coordinate
+   * @param z Z coordinate
+   * @return Unique string key
+   */
+  std::string make_3d_key(double x, double y, double z);
+
+  /**
+   * @brief Get or create feature ID from 3D coordinates
+   *
+   * @param x X coordinate
+   * @param y Y coordinate
+   * @param z Z coordinate
+   * @return Feature ID
+   */
+  uint get_feature_id(double x, double y, double z);
+
+  /**
+   * @brief Features callback for pre-extracted features
+   * Expected format: [timestamp, id1, u1, v1, un1, vn1, id2, u2, v2, un2, vn2, ...]
+   * where:
+   *  - timestamp: feature extraction timestamp
+   *  - id: feature id
+   *  - u, v: undistorted pixel coordinates
+   *  - un, vn: normalized coordinates
+   * 
+   * @param msg Float64MultiArray message
+   */
+  void callback_features(const std_msgs::Float64MultiArray::ConstPtr &msg);
+
  private:
   /**
    * @brief Publish pose, images and path messages
@@ -77,12 +114,20 @@ class MSCEqFRos
    */
   void publish(const msceqf::Camera &cam);
 
+  /**
+   * @brief Publish pose
+   *
+   * @param timestamp process timestamp
+   */
+  void publishFromFeatures(const double& timestamp); 
+  
   ros::NodeHandle nh_;  //!< ROS node handler
 
   msceqf::MSCEqF sys_;  //!< MSCEqF system
 
   ros::Subscriber sub_cam_;  //!< Camera subscriber
   ros::Subscriber sub_imu_;  //!< IMU subscriber
+  ros::Subscriber sub_features_;  //!< Features subscriber
 
   ros::Publisher pub_pose_;        //!< Pose publisher
   ros::Publisher pub_image_;       //!< Image publisher
@@ -97,9 +142,14 @@ class MSCEqFRos
   sensor_msgs::CameraInfo intrinsics_;             //!< Intrinsics message
   geometry_msgs::PoseStamped origin_;              //!< Origin message
 
+  std::deque<msceqf::TriangulatedFeatures> triangulated_features_;  //!< Triangulated features buffer
   std::deque<msceqf::Camera> cams_;       //!< Camera measurements
   std::mutex mutex_;                      //!< Camera measurements mutex
   std::atomic<bool> processing_ = false;  //!< Camera measurements processing flag
+
+  // Feature ID management
+  std::unordered_map<std::string, uint> feature_3d_to_id_;  //!< Map 3D coordinates to feature IDs
+  uint next_feature_id_ = 0;                                 //!< Next feature ID to assign
 
   bool record_;      //!< Record flag
   rosbag::Bag bag_;  //!< Bagfile

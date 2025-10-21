@@ -47,6 +47,7 @@ enum class DistortionModel
 {
   RADTAN,
   EQUIDISTANT,
+  FOV,
 };
 
 /**
