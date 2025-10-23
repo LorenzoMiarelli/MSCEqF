@@ -204,9 +204,9 @@ FOVCamera::FOVCamera(const CameraOptions& opts, const Vector4& intrinsics)
     : PinholeCamera(opts.distortion_coefficients_, intrinsics, opts.resolution_(0), opts.resolution_(1))
 {
   // Validate that we have the s parameter
-  if (distortion_coefficients_.size() < 1)
+  if (distortion_coefficients_.size() != 1)
   {
-    throw std::runtime_error("FOV distortion model requires at least 1 coefficient (s parameter)");
+    throw std::runtime_error("FOV distortion model requires 1 coefficient (s parameter)");
   }
 }
 

@@ -57,14 +57,6 @@ class MSCEqF
   void processMeasurement(TriangulatedFeatures& meas) { processFeaturesMeasurement(meas); }
 
   /**
-   * @brief Get reference to the track manager
-   *
-   * @return Reference to the track manager
-   */
-  TrackManager& getTrackManager() { return track_manager_; }
-  const TrackManager& getTrackManager() const { return track_manager_; }
-
-  /**
    * @brief Get a constant reference to the MSCEqF options
    *
    * @return Options

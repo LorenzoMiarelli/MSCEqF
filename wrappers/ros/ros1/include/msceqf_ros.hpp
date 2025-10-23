@@ -74,33 +74,16 @@ class MSCEqFRos
   void callback_imu(const sensor_msgs::Imu::ConstPtr &msg);
 
   /**
-   * @brief Create unique key from 3D coordinates for feature ID mapping
-   *
-   * @param x X coordinate
-   * @param y Y coordinate
-   * @param z Z coordinate
-   * @return Unique string key
-   */
-  std::string make_3d_key(double x, double y, double z);
-
-  /**
-   * @brief Get or create feature ID from 3D coordinates
-   *
-   * @param x X coordinate
-   * @param y Y coordinate
-   * @param z Z coordinate
-   * @return Feature ID
-   */
-  uint get_feature_id(double x, double y, double z);
-
-  /**
    * @brief Features callback for pre-extracted features
-   * Expected format: [timestamp, id1, u1, v1, un1, vn1, id2, u2, v2, un2, vn2, ...]
-   * where:
-   *  - timestamp: feature extraction timestamp
-   *  - id: feature id
-   *  - u, v: undistorted pixel coordinates
-   *  - un, vn: normalized coordinates
+   *  TrinagulatedFeatures:
+   *    Features features_;            //!< The features detected in the image
+   *    std::vector<Vector3> points_;  //!< The 3D points corresponding to the features
+   *    fp timestamp_ = -1;            //!< Timestamp of the Camera reading
+   *  Features:
+   *    FeaturesCoordinates distorted_uvs_;   //!< Distorted (u, v) coordinates of the features detected/tracked
+   *    FeaturesCoordinates uvs_;             //!< Undistorted (u, v) coordinates of the features detected/tracked
+   *    FeaturesCoordinates normalized_uvs_;  //!< Undistorted normalized (u, v) coordinates of features detected/tracked
+   *    FeatureIds ids_;                      //!< Id of the features detected/tracked
    * 
    * @param msg Float64MultiArray message
    */
@@ -146,11 +129,7 @@ class MSCEqFRos
   std::deque<msceqf::Camera> cams_;       //!< Camera measurements
   std::mutex mutex_;                      //!< Camera measurements mutex
   std::atomic<bool> processing_ = false;  //!< Camera measurements processing flag
-
-  // Feature ID management
-  std::unordered_map<std::string, uint> feature_3d_to_id_;  //!< Map 3D coordinates to feature IDs
-  uint next_feature_id_ = 0;                                 //!< Next feature ID to assign
-
+  
   bool record_;      //!< Record flag
   rosbag::Bag bag_;  //!< Bagfile
 

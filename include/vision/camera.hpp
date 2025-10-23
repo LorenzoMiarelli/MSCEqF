@@ -195,13 +195,6 @@ struct EquidistantCamera final : public PinholeCamera
   void undistortImage(const cv::Mat& image, cv::Mat& image_undistorted) override;
 };
 
-using PinholeCameraSharedPtr = std::shared_ptr<PinholeCamera>;
-using PinholeCameraUniquePtr = std::unique_ptr<PinholeCamera>;
-using RadtanCameraSharedPtr = std::shared_ptr<RadtanCamera>;
-using RadtanCameraUniquePtr = std::unique_ptr<RadtanCamera>;
-using EquidistantCameraSharedPtr = std::shared_ptr<EquidistantCamera>;
-using EquidistantCameraUniquePtr = std::unique_ptr<EquidistantCamera>;
-
 /**
  * @brief This class represent a pinhole camera with FOV (Field of View) distortion model
  * 
@@ -229,6 +222,12 @@ struct FOVCamera final : public PinholeCamera
   void undistortImage(const cv::Mat& image, cv::Mat& image_undistorted) override;
 };
 
+using PinholeCameraSharedPtr = std::shared_ptr<PinholeCamera>;
+using PinholeCameraUniquePtr = std::unique_ptr<PinholeCamera>;
+using RadtanCameraSharedPtr = std::shared_ptr<RadtanCamera>;
+using RadtanCameraUniquePtr = std::unique_ptr<RadtanCamera>;
+using EquidistantCameraSharedPtr = std::shared_ptr<EquidistantCamera>;
+using EquidistantCameraUniquePtr = std::unique_ptr<EquidistantCamera>;
 using FOVCameraSharedPtr = std::shared_ptr<FOVCamera>;
 using FOVCameraUniquePtr = std::unique_ptr<FOVCamera>;
 
