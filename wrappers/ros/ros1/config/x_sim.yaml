@@ -1,28 +1,28 @@
 # Initialization
 init_with_given_state: true
 q0: [0.0, 0.0, 0.0, 1.0] # [x,y,z,w]
-v0: [1.0, 0.0, 0.0]
+v0: [5.0, 0.0, 0.0]
 p0: [0, 0, 5.0]
 b0: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 t0: 0.0
 
 # Initial standard deviations (attitude, velocity, position, bias, extrinsics, instrinsics)
-extended_pose_std: [3.0, 3.0, 3.0, 0.05, 0.05, 0.05, 0.0, 0.0, 0.0]
-bias_std: [6.0, 6.0, 6.0, 0.3, 0.3, 0.3]
+extended_pose_std: [0.0, 0.0, 0.0, 0.00, 0.00, 0.00, 0.0, 0.0, 0.0]
+bias_std: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 extrinsics_std: [1.0e-2, 1.0e-2, 1.0e-2, 1.0e-2, 1.0e-2, 1.0e-2]
 intrinsics_std: [1.0, 1.0, 1.0, 1.0]
 
 # IMU noise statistics
-accelerometer_noise_density: 0.0083 # Accel noise spectral density [m/s^2/sqrt(Hz)]
-accelerometer_random_walk:   0.00083 # Accel bias random walk [m/s^3/sqrt(Hz)]
-gyroscope_noise_density: 0.0013 # Gyro noise spectral density [rad/s/sqrt(Hz)]
-gyroscope_random_walk:   0.00013 # Gyro bias random walk [rad/s^2/sqrt(Hz)]
+accelerometer_noise_density: 0.00 # Accel noise spectral density [m/s^2/sqrt(Hz)]
+accelerometer_random_walk:   0.000 # Accel bias random walk [m/s^3/sqrt(Hz)]
+gyroscope_noise_density: 0.00 # Gyro noise spectral density [rad/s/sqrt(Hz)]
+gyroscope_random_walk:   0.000 # Gyro bias random walk [rad/s^2/sqrt(Hz)]
 
 # Camera calibration (according to kalibr format, both T_imu_cam and T_cam_imu)
-# distortion_coeffs: [0.0, 0.0, 0.0, 0.0]
-# distortion_model: radtan
-distortion_coeffs: [1.0]  # s parameter from MATLAB (cam1.s = 0.94)
-distortion_model: fov
+distortion_coeffs: [0.0, 0.0, 0.0, 0.0]
+distortion_model: radtan
+# distortion_coeffs: [0.0]  # s parameter from MATLAB (cam1.s = 0.94)
+# distortion_model: fov
 resolution: [640, 480]
 # cam1_fx: 0.595876796297105
 # cam1_fy: 0.866025403784439 
@@ -69,7 +69,7 @@ zero_velocity_update: disabled
 # State options
 enable_camera_intrinsic_calibration: false
 gravity: 9.81
-num_clones: 11
+num_clones: 5
 
 # Tracker options
 # Possible options for feature_detector are fast and shi-tomasi
@@ -81,14 +81,16 @@ grid_x_size: 3
 grid_y_size: 3
 min_feature_pixel_distance: 15
 # min_features: 100
-min_features: 10
+min_features: 30
 max_features: 120
 fast_threshold: 20
 shi_tomasi_quality_level: 0.75
 
 # Track Manager
 max_track_length: 10
-min_track_length: 3  
+
+# Timeshift between cam and IMU
+timeshift_cam_imu: 0.0001 
 
 # Logger level 
 # Possible levels are 0: Full, 1: INFO, 2: WARN, 3: ERR, 4: INACTIVE
